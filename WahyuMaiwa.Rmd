@@ -1,0 +1,383 @@
+
+---
+title: "<center><h2>Policing and Crime in Dallas (2016)</h2></center>"
+author: "<center>Wahyu Maiwa-2107460</center>"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+  <style>
+  body {
+  text-align: justify}
+  </style>
+
+
+```{r setup, include=FALSE, warning=FALSE,message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+  library(plotly)
+  library(ggplot2)
+  library(htmlwidgets)
+  library(plyr)
+  library(leaflet)
+  library(devtools)
+  library(lubridate)
+  library(forcats)
+  library(data.table)
+  library(dplyr)
+
+
+#loading data
+DATA <- read.csv("C:/Users/Wahyu Maiwa/OneDrive/Documents/Data Visualization Final Project/37-00049_UOF-P_2016_prepped.csv", 
+                      header = TRUE, colClasses = "factor", skip = 1)
+
+DATA$Latitude<-as.numeric(levels(DATA$Latitude))[DATA$Latitude]
+DATA$Longitude<-as.numeric(levels(DATA$Longitude))[DATA$Longitude]
+
+```
+
+
+Understanding patterns in crime and policing statistics beforehand can help improve policing and crime prevention efforts. Crime rates have increased around the world. Understanding how crime occurs can be one strategy for regulating and limiting the number of crimes in this environment. Certain trends in the way violations are committed may often be noticed, regardless of the type of crime, time, or location. The police would be much better  off if not only to bring down these crimes is also about being impartial and making everyone feel safe, regardless of  racial differences and  skin color (Racism). Although racial profiling of criminals is unethical, understanding the distribution of people in different groups, such as age or ethnicity, can help criminal profiling. Different trends in crime and policing in the city of Dallas were investigated in the study. Police records of crimes in various locations, on various days, and at various times of the day are analyzed. In addition, tendencies in the racial distribution of offenders were found. The aim of this project is to uncover patterns that could help in making strategy more effective in fighting crime in the future and education purpose.
+
+
+
+
+### Results and Analysis
+
+The study is based on 2016 data on crime and policing in the City of Dallas, Texas. In 2016, Dallas police recorded 2,383 people. The dataset  includes information about the people who committed the offences, and the police who responded to the incident. It also includes details about the location and timing of the incident. All of this precise data, when combined, helps in the analysis of crime and policing patterns in Dallas. The number of crimes is spread throughout the area in the city of Dallas, namely the central, north, north, northeast, northwest, southcentral, southeast, and southwest regions.
+
+### 1. Crime on Map
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# map 1
+# show every crime in Dallas
+
+map_1<-DATA%>%
+  leaflet()%>% 
+  addTiles()%>%
+  addMarkers(
+  clusterOptions = markerClusterOptions())
+
+map_1
+
+```
+
+
+Map above shows the number of lawbreakers  in Dallas during 2016. The way this folder works is that the more enlarged it  will be, the more detailed the image will be. This map  has the same as  other electronic  maps that have parts of the city of Dallas, such as airports, highways, housing,  railroads,  Lakes, rivers and so on. This map  will be clarified again with the figures  below.
+
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE, fig.width= 8, fig.height=4}
+
+#map_2 is map of crime in different area of Dallas
+
+map_2 <- leaflet(DATA)%>%    # Base groups
+  addTiles(group = "Detail Map") %>%
+  addProviderTiles(providers$Stamen.TonerLite, group = "Simple Map")
+
+map_2 <- map_2%>% addCircles(data = DATA[DATA$DIVISION=="CENTRAL",],group = "CENTRAL",col="pink")%>%
+  addCircles(data = DATA[DATA$DIVISION=="NORTH CENTRAL",], group = "NORTH CENTRAL",col="yellow")%>%
+  addCircles(data = DATA[DATA$DIVISION=="NORTHEAST",],     group = "NORTHEAST",col="green")%>%
+  addCircles(data = DATA[DATA$DIVISION=="NORTHWEST",],     group = "NORTHWEST",col="blue")%>%
+  addCircles(data = DATA[DATA$DIVISION=="SOUTH CENTRAL",], group = "SOUTH CENTRAL",col="red")%>%
+  addCircles(data = DATA[DATA$DIVISION=="SOUTHEAST",],     group = "SOUTHEAST",col="#grape")%>%
+  addCircles(data = DATA[DATA$DIVISION=="SOUTHWEST",],     group = "SOUTHWEST",col="#skyblue")
+
+#layers control 
+map_2<-map_2%>%addLayersControl(
+  baseGroups = c("Simple Map","Detail Map"),
+  overlayGroups = c("CENTRAL","NORTH CENTRAL","NORTHEAST","NORTHWEST",
+                    "SOUTH CENTRAL","SOUTHEAST","SOUTHWEST"),
+  options = layersControlOptions(collapsed = FALSE))
+
+map_2
+
+
+
+```
+ 
+ 
+In the map above we are shown more details about crime data  throughout the city of Dallas for 12 months. The data is divided into   2 types of maps, namely the "Simple Map" map which means the  map will be simple or colorless.  While the map "Detail Map" will show in    detail the area in the map as I have mantion before.  Divided into 7 areas such as central, north central, northeast, southeast, northwest, south central and southwest that can  be  checked so that they can see in  detail as desired.
+
+### 2. Crime Analysis
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE, fig.width= 8, fig.height=4}
+
+#figure 1
+
+Inc_per_division<-DATA%>%ggplot(aes(x = DIVISION)) + 
+  geom_bar(fill="skyblue") + 
+  coord_flip() +
+  theme_minimal()+
+  labs(title="Figure 1: Total Crime in Dallas",x = "Dallas Area", y = "Dallas 2016")+ 
+  theme_minimal(base_size = 8)+
+  theme(plot.title = element_text(hjust = 0.45))
+
+ggplotly(Inc_per_division)
+
+```
+
+
+At figure 1. The total crime in Dallas  is very clear.  Divided into  7 parts of the area. The area with the  largest number of crimes is central Dallas, and the lowest is the Northeast.  The other five areas  are similar to the  number of crimes during  2016. 
+
+
+
+```{r, echo=FALSE,warning=FALSE, message=FALSE}
+#Figure 2
+
+DATA$OCCURRED_D <- parse_date_time(x = DATA$OCCURRED_D,
+                                        orders = c("d m y", "d B Y", "m/d/y"))
+
+#extract weekday from date and create the plot for CRIME VS DAY
+DATA$weekday<-weekdays(DATA$OCCURRED_D)
+data_week <- setDT(DATA, )[,list(count = .N), by = .(DIVISION, weekday)][,list(weekday = weekday, count = count,
+                                                                                      percent = paste0(formatC(count*100/sum(count), digits = 2), "%"),
+                                                                                      percent_num = count/sum(count)), by = DIVISION]
+
+
+#Create bar plot
+data_week<-ggplot(data_week, aes(x = DIVISION, y = percent_num, fill = weekday))+
+  geom_bar(position = position_fill(),stat = "identity",width = 0.4)+
+  labs(title="Figure 2. Crime percentage all weeks",x = "Area", y = "Dallas 2016", fill="Days")+
+  geom_text(aes(label = percent), position = position_fill(vjust = 0.5), size = 2)+
+  theme_minimal(base_size=10)+
+  coord_flip()
+
+ggplotly(data_week)
+
+```
+
+
+Figure 2   clearly shows how the percentage of crime every day (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) with interesting colors and percentage data  what is shown makes this map easy to understand. The data  compares two important items: 7 days and 7 areas in Dallas. 
+
+
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE, fig.width=8, fig.height=4}
+#figure 3
+# CRIME in All day long
+
+DATA$time <- format(strptime(DATA$OCCURRED_T, "%I:%M:%S %p"), "%H:%M:%S")
+part_day <- as.POSIXct(strptime((DATA$time),"%H:%M:%S"),"UTC")                    #change chategory
+
+x <- as.POSIXct(strptime(c("050000","115959","120000","165959", "170000","205959","210000","045959"),"%H%M%S"),"UTC")
+DATA$Parts_of_day <- case_when(between(part_day,x[1],x[2]) ~"Morning",between(part_day,x[3],x[4]) ~"Afternoon",
+  between(part_day,x[5],x[6]) ~"Evening",TRUE ~"Night")
+
+# Create plot
+plot_day<-DATA %>%
+  mutate(Parts_of_day = fct_relevel(Parts_of_day, 
+                                    "Morning", "Afternoon", "Evening", 
+                                    "Night"))%>%
+  ggplot( aes(x=Parts_of_day))+ 
+  geom_bar(fill="skyblue")+
+  labs(title="Figure 3. Crime in a day long",x = "detail time", y = "Dallas 2016")+
+  theme_minimal(base_size=10)+
+  coord_flip()
+
+ggplotly(plot_day)
+
+```
+
+
+This figure  shows that crime is more common on Saturdays  and Sundays in most  areas except south central and northeast. The map shows that crime cases  in the South East are  almost as widespread throughout the  week.   Then the number of crimes that     occurred in the northeast  was 24%.
+
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE, fig.width=8}
+#figure 4
+#Crime all day long vs Dallas area
+
+area_day <- setDT(DATA, )[,list(count = .N), by = .(DIVISION,Parts_of_day)][,list(Parts_of_day = Parts_of_day, count = count,
+                                                                                                    percent = paste0(formatC(count*100/sum(count), digits = 2), "%"),
+                                                                                                    percent_num = count/sum(count)), by = DIVISION]
+
+
+# Create Plot
+area_day<-ggplot(area_day, aes(x = DIVISION, y = percent_num, fill = Parts_of_day))+
+  geom_bar(position = position_fill(),stat = "identity",width = 0.5)+
+  labs(title="Figure 4. Crime in all area  vs All day long",x = "Areas", y = "Dallas 2016")+
+  geom_text(aes(label = percent), position = position_fill(vjust = 0.4), size = 2)+
+  theme_minimal(base_size=8)+
+  coord_flip()
+
+ggplotly(area_day)
+```
+
+
+Figure 3 shows the number of crimes that occur in a day.  Parts of the day were determined at the time of the incident, with 5 a.m. to 12:00 p.m. being considered "Morning," 12:00-5:00 p.m. being considered "Afternoon," 5 p.m. to 9 p.m. being considered "Evening." With 997 and 299 cases, respectively, the highest number of events at night and lowest in the morning, as shown in the figure. The number of cases per day seems to continue to rise from morning to night, with the largest number occurring at night.
+
+
+```                           {r, echo=FALSE,warning=FALSE,message=FALSE, fig.height=4}
+#Figure 5 
+#Kind of Crime Vs Days in a week
+
+#Clearing data
+DATA3 <- DATA[DATA$CIT_INFL_A != "NULL", ]
+DATA3<- DATA3[DATA3$CIT_INFL_A != "Unknown"]
+
+#remove values which we are not going to analyze
+DATA3<- DATA3[DATA3$CIT_INFL_A != "undetected"]
+DATA3<- DATA3[DATA3$CIT_INFL_A != "animal"]
+DATA3<- DATA3[DATA3$CIT_INFL_A != "fd.unknown if armed"]
+DATA3<- DATA3[DATA3$CIT_INFL_A != "fd.animal"]
+DATA3<- DATA3[DATA3$CIT_INFL_A != "fd.suspect unarmed"]
+DATA3<- DATA3[DATA3$CIT_INFL_A != "fd.motor vehicle"]
+
+#proportion of subject description on different days of the week
+deta_week2 <- setDT(DATA3, )[,list(count = .N), by = .(CIT_INFL_A,weekday)][,list(weekday = weekday, count = count,
+                                                                                             percent = paste0(formatC(count*100/sum(count), digits = 2), "%"),
+                                                                                             percent_num = count/sum(count)), by = CIT_INFL_A]
+
+
+#plot
+deta_week2<-ggplot(deta_week2, aes(x = CIT_INFL_A, y = percent_num, fill = weekday))+
+  geom_bar(position = position_fill(),stat = "identity",width = 0.4)+
+  labs(title ="Figure 5.Kind of Crime Vs a day", x = "Kind of Crime", y = "Dallas 2016", fill="Days")+
+  geom_text(aes(label = percent), position = position_fill(vjust = 0.5), size = 2)+
+  theme_minimal(base_size=8)+
+  theme(plot.title = element_text(hjust = 0.4))+
+  theme(plot.caption = element_text(hjust=0.4, size=rel(1)))+coord_flip()
+
+ggplotly(deta_week2)
+
+```
+
+In this figure  we are shown the types of crimes that occurred  in Dallas in  2016.  It consists of 13 types of crimes ranging from narcotics crimes to crimes due to  alcohol. This data is compared with the day of the week (7 days) to get a satisfactory percentase value. This data  shows that interesting crimes  that crimes with motorcycle vehicles only occur on Saturdays  and Sundays.  On  Friday, crime surged beyond the previous  day with the highest score  on  marijuana crimes.
+
+
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE, fig.width=8}
+
+#Map 3
+#Kind of Crime Map
+
+map_3 <- leaflet(DATA3)%>%
+  addTiles(group = "Detail Map)") %>%
+  addProviderTiles(providers$Stamen.TonerLite, group = "Simple Map")
+
+map_3 <- map_3%>% 
+  addCircles(data = DATA3[DATA3$CIT_INFL_A=="Alchohol and unknown drugs",],
+             group = "Alchohol and unknown drugs",col="green")%>%
+  addCircles(data = DATA3[DATA3$CIT_INFL_A=="Mentally unstable",],
+             group = "Mentally unstable",col="grape")%>%
+  addCircles(data = DATA3[DATA3$CIT_INFL_A=="Marijuana",],
+             group = "Marijuana",col="yellow")%>%
+  addCircles(data = DATA3[DATA3$CIT_INFL_A=="FD-Suspect w/ Gun",],
+             group = "FD-Suspect w/ Gun",col="red")
+
+map_3 <- map_3%>%addLayersControl(
+  baseGroups = c("Simple Map","Detail Map)"),
+  overlayGroups = c("Alchohol and unknown drugs","Mentally unstable","Marijuana","FD-Suspect w/ Gun"),
+  options = layersControlOptions(collapsed = FALSE))
+
+map_3
+
+```
+
+The map above shows 4 types of crimes that occur in Dallas, namely crimes due to alcohol, marijuana, and suspect with gun that spread throughout the city of Dallas.  The principle of this  map is the same as the map above. When zoomed in will show the crime that occurred  in  a specific area. This map  also shows variable alcohol and unknown drugs that are green have the highest  number of crimes among other variables.
+
+
+### 3. Crime and Racism
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE, fig.width=8}
+#figure 6
+#Total crime by race
+
+DATA_2 <- DATA[DATA$CitRace != "NULL", ]
+DATA_2 <- DATA_2[DATA_2$CIT_ARREST != "No", ]
+
+#count of race among offenders
+count_race<-DATA_2%>%ggplot(aes(x = CitRace)) + 
+  geom_bar(fill="skyblue") + 
+  labs(title="Figure 6. Total crime by race",x = "Kind of Race",
+       y = "Total Criminal")+   
+  theme_minimal()+
+  coord_flip()
+
+#create Plote
+ggplotly(count_race)
+
+```
+
+In the plot above shows 6 races with crime rates. The data  showed that   Blacks committed twice as many crimes  as Hispanics and whites, who were  only about 450 each.  Other types of races such as Asians and Others have a non-felony  count of 5 and 8 felonies.  But this data  also shows that the  American   race Ind leads to only 1 crime. The plot below will show a comparison between  crimes between all races in the  Dallas area, USA.
+
+
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE, fig.width=8}
+
+#figure 7
+#Area Vs Race
+
+area_race <- setDT(DATA, )[,list(count = .N), by = .(DIVISION, CitRace)][,list(CitRace = CitRace, count = count,
+                                                                                         percent = paste0(formatC(count*100/sum(count), digits = 2), "%"),
+                                                                                         percent_num = count/sum(count)), by = DIVISION]
+
+
+# Crete plot
+area_race<-ggplot(area_race, aes(x = DIVISION, y = percent_num, fill = CitRace))+
+  geom_bar(position = position_fill(),stat = "identity",width = 0.4)+
+  labs(title = "Figure 7. crime by each race per area in Dallas",x = "Area", y = "Dallas 2016", fill="Kind of Race")+
+  geom_text(aes(label = percent), position = position_fill(vjust = 0.5), size = 2)+
+  theme_minimal(base_size=8)+
+  coord_flip()
+
+ggplotly(area_race)
+
+```
+
+On the 7 races  in this  plot,  it is very clear that the  hitan race became the most  criminal in Dallas, USA. The data  also showed that  their offenders outperformed other  races in almost   all areas except nortwest and northcentral where white   races committed crimes.  most  in the northcentral as much as 40% of the total crime dsana.  In the Northwest, Hispanics committed the highest crime, at 40 percent.
+
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE, fig.width=8}
+
+#map 4
+#Final map show all crime in 2016 in Dallas 
+
+map <- leaflet(DATA_2)%>%
+  addTiles(group = "Detail Map") %>%
+  addProviderTiles(providers$Stamen.TonerLite, group = "Simpel Map")
+
+
+map_4 <- map%>% addCircles(data =  DATA_2[DATA_2$CitRace=="White",], 
+                              group = "White",col="green")%>%
+  addCircles(data = DATA_2[DATA_2$CitRace=="Other",],
+             group = "Other",col="red")%>%
+  addCircles(data = DATA_2[DATA_2$CitRace=="Hispanic",],
+             group = "Hispanic",col="yellow")%>%
+  addCircles(data = DATA_2[DATA_2$CitRace=="Black",],
+             group = "Black",col="skyblue")%>%
+  addCircles(data = DATA_2[DATA_2$CitRace=="Asian",],
+             group = "Asian",col="pink")%>%
+  addCircles(data = DATA_2[DATA_2$CitRace=="American Ind",],
+             group = "American Ind",col="grape")
+
+
+#layers control 
+map_4 <- map_4%>%addLayersControl(
+  baseGroups = c("Simpel Map","Detail Map"),
+  overlayGroups = c("White","Other","Hispanic","Black",
+                    "Asian","American Ind"),
+  options = layersControlOptions(collapsed = FALSE))
+
+map_4
+
+
+```
+
+On this map  we can see the conclusion of the  data collected that the skyblue-colored black  race has a crime point spread across the city.  Followed by  white race and  Hispanic race, then Asian, others and American ind. What's interesting about this map.   White's  race crime data is not visible at all. 
+
+
+### FInal Conclusion
+
+[1] The map will make it easier for police officers to carry out their duties. such as mapping the possibility of crime and very good enforcement strategies. by only needing to zoom, the details of the perpetrators in the area of the crime will be seen in great detail.
+
+[2] The number of crimes will continue to be monitored, this system will be very easy to follow the number of cases recorded by police officers. that means the percentage of crimes, the likelihood of when they will occur, and where they will occur will be made easier by these plots.
+
+[3] Racism is something that should not be allowed to happen. Through this data, the author concludes that there are very unequal actions or behaviors where the white people almost never commits a crime, while the black people is the perpetrator of the most actions. These data suggest that this is the case and will likely be a good source of learning or improving attitudes of any race or society in behavior.
+
+### Source
+
+[1] University of Essex.
+
+[2] https://www.kaggle.com/datasets/center-for-policing-equity/data-science-for-good
+
+
+
